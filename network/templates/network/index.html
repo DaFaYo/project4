@@ -1,0 +1,54 @@
+{% extends "network/layout.html" %}
+{% load static %}
+
+{% block body %}
+    <h2>All Posts</h2>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">New Post</h5>
+            <div id="compose-post-view">
+                <div id="error-message" class="alert alert-danger" role="alert"></div>
+                <form id="compose-post-form">
+                    {% csrf_token %}
+                    <div class="form-outline mb-4">
+                        <textarea class="form-control" id="compose-post-body" rows="4"></textarea>
+                      </div>
+                    <input type="submit" class="btn btn-primary" value="Post"/>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="posts-view">
+    </div>
+
+
+    <!-- {% for post in posts %}
+
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                    <h5 class="card-title">{{ post.user.username }}</h5>
+                        <div id="compose-post-view">
+                            <p class="card-text">{{ post.body }}</p>
+                        </div>
+                        <div id="compose-post-view">
+                            <p class="card-text">{{ post.timestamp }}</p>
+                        </div>
+                        <div id="compose-post-view">
+                            <p class="card-text">Likes: {{ post.likes }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+   
+    {% endfor %}     -->
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static 'network/posts.js' %}"></script>
+{% endblock %}

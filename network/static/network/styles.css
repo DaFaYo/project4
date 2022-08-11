@@ -1,0 +1,17 @@
+body {
+    padding: 10px;
+}
+
+.card {
+    flex-direction: row;
+    height: 100%;
+    line-height: 100%;
+    padding: 20px;
+    /* outline: 1px solid black; */
+    position:relative;
+}  
+
+#timestamp {
+    font-weight: lighter;
+    font-size: small;
+}
