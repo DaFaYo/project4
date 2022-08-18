@@ -1,3 +1,4 @@
+from http.client import HTTPResponse
 import json
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
@@ -6,6 +7,9 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ObjectDoesNotExist, BadRequest
+from django.views.defaults import page_not_found, bad_request
+
 
 from .models import Post, User
 
@@ -87,3 +91,50 @@ def compose(request):
     # Return emails in reverse chronologial order
     posts = Post.objects.all().order_by("-timestamp")
     return JsonResponse([post.serialize() for post in posts], safe=False)
+
+
+# TODO: make this work without the csrf_exempt decorator
+@csrf_exempt
+@login_required
+def profile(request, user_id):
+    user = None
+    try:
+
+        user = User.objects.get(pk=user_id)
+
+    except ObjectDoesNotExist as e:
+        return page_not_found(request, e)
+
+     # Return email contents
+    if request.method == "GET":
+
+        # Check if the user that is logged in, is following the user
+        # of which profile he's looking at
+        logged_in_user = request.user.following.all().filter(id = user.id)
+
+        is_following = logged_in_user.exists() and (logged_in_user.get() == user)
+        
+        profile_dict = user.serialize()
+        profile_dict["number_of_followers"] = user.followers.count()
+        profile_dict["following"] = is_following
+        return JsonResponse(profile_dict, safe=False)     
+
+    # Update whether profile should be followed
+    elif request.method == "PUT":
+        data = json.loads(request.body)
+        if data.get("following") is not None:
+
+            # TODO: remove the user from the following list for the user that is signed in.
+            # or vice versa
+            user.following = data["following"]
+            user.save()
+        return HTTPResponse(status=204)
+
+    # Profile must be via GET or PUT
+    else:
+        return JsonResponse({
+            "error": "GET or PUT request required."
+        }, status=400)
+
+
+      
