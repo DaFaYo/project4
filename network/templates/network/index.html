@@ -4,16 +4,16 @@
 {% block body %}
 
     <div id="all-posts-view">
-        <h2>All Posts</h2>
+        <div id="page-name"></div>
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">New Post</h5>
-                <div id="compose-post-view">
+                <div id="post-view">
                     <div id="error-message" class="alert alert-danger" role="alert"></div>
-                    <form id="compose-post-form">
+                    <form id="post-form">
                         {% csrf_token %}
                         <div class="form-outline mb-4">
-                            <textarea id="compose-post-body" class="form-control" rows="4"></textarea>
+                            <textarea id="post-body" class="form-control" rows="4"></textarea>
                         </div>
                         <input type="submit" class="btn btn-primary" value="Post" />
                     </form>

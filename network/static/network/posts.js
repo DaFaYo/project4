@@ -1,16 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  document.querySelector('#compose-post-form').onsubmit = send_post;
+  document.querySelector('#following-link').addEventListener('click', () => load_following('following'));
 
-  load_posts();
+  document.querySelector('#post-form').onsubmit = send_post;
+
+  load_posts('all posts');
 });
+
+function initialize_page(page_name) {
+
+  document.querySelector('#all-posts-view').style.display = 'block';
+  document.querySelector('#error-message').style.display = 'none';
+  document.querySelector('#error-message').innerHTML = '';
+
+  document.querySelector('#post-body').value = '';
+  document.querySelector('#posts-view').innerHTML = '';
+  document.querySelector('#profile-view').innerHTML = '';
+  document.querySelector('#page-name').innerHTML = `<h3>${page_name.charAt(0).toUpperCase() + page_name.slice(1)}</h3>`;
+
+} 
 
 
 function send_post(e) {
 
   e.preventDefault();
 
-  const _body = document.querySelector('#compose-post-body').value;
+  const _body = document.querySelector('#post-body').value;
   const csrftoken = getCookie('csrftoken');
 
   fetch('/posts', {
@@ -47,16 +62,15 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-function load_posts() {
+function load_posts(page_name) {
 
-  document.querySelector('#all-posts-view').style.display = 'block';
-  document.querySelector('#error-message').style.display = 'none';
-  document.querySelector('#error-message').innerHTML = '';
+  initialize_page(page_name);
+  get_posts();
 
-  document.querySelector('#compose-post-body').value = '';
-  document.querySelector('#posts-view').innerHTML = '';
-  document.querySelector('#profile-view').innerHTML = '';
+}
 
+function load_following(page_name) {
+  initialize_page(page_name);
   get_posts();
 
 }

@@ -70,7 +70,7 @@ def register(request):
 
 
 
-def compose(request):
+def post(request):
 
     if request.method == "POST":
 
@@ -137,4 +137,8 @@ def profile(request, user_id):
         }, status=400)
 
 
-      
+@login_required
+def following(request):
+
+    return render(request, "network/following.html")
+     
