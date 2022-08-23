@@ -168,14 +168,17 @@ function create_profile_box(user) {
   <b>number of people ${user.username} follows:</b> ${user.number_of_following}
   `;
 
-  followButtonElement.setAttribute("class", "btn btn-sm btn-outline-primary");
-  followButtonElement.innerHTML = (user.following) ? "Unfollow" : "Follow";
-  followButtonElement.addEventListener('click', () => {
-    follow_unfollow(user);
-  });
-
   element.append(textElement);
-  element.append(followButtonElement);
+
+  if (user.hasOwnProperty('following')) {
+    followButtonElement.setAttribute("class", "btn btn-sm btn-outline-primary");
+    followButtonElement.innerHTML = (user.following) ? "Unfollow" : "Follow";
+    followButtonElement.addEventListener('click', () => {
+    follow_unfollow(user);
+    });
+    element.append(followButtonElement);
+  }
+  
   return element;
 }
 
@@ -183,13 +186,22 @@ function create_profile_box(user) {
 
 function follow_unfollow(user) {
 
+  const csrftoken = getCookie('csrftoken');
+
   fetch(`/profiles/${user.id}`, {
     method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrftoken
+    },
+    mode: 'same-origin', // Do not send CSRF token to another domain.
     body: JSON.stringify({
         following: !user.following
     })
   }).then(() => {
-    load_posts();
-  });
+    load_profile(user.id);
+  }).catch((error) => {
+  console.log(`error: ${error}`);
+});
 
 }
