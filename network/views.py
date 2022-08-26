@@ -8,9 +8,10 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.core.exceptions import ObjectDoesNotExist
 from django.views.defaults import page_not_found
-
+from django.core.paginator import Paginator
 
 from .models import Post, User
+
 
 
 def index(request):
@@ -69,8 +70,7 @@ def register(request):
         return render(request, "network/register.html")
 
 
-
-def post(request):
+def posts(request):
 
     if request.method == "POST":
 
@@ -85,11 +85,12 @@ def post(request):
 
 
         Post.objects.create(user=request.user, body=body)
-        return JsonResponse({"message": "Email sent successfully."}, status=201)
+        return JsonResponse({"message": "Post sent successfully."}, status=201)
     
-    # Return emails in reverse chronologial order
+    # Return posts in reverse chronologial order
     posts = Post.objects.all().order_by("-timestamp")
-    return JsonResponse([post.serialize() for post in posts], safe=False)
+    return make_post_json_response(request, posts)
+
 
 
 @ensure_csrf_cookie
@@ -139,6 +140,35 @@ def profile(request, user_id):
 
 @login_required
 def following(request):
+    
+    following_users = request.user.following.all()
+    posts = Post.objects.filter(user__in=following_users).order_by("-timestamp")
+    return make_post_json_response(request, posts)
+    
+    
+def make_post_json_response(request, posts_list):
 
-    return render(request, "network/following.html")
-     
+    try:
+        page_number = int(request.GET.get('page', '1'))
+        page_number = page_number if page_number > 0 else 1
+    
+    except ValueError:
+        page_number = 1
+
+    # show 10 posts per page
+    paginator = Paginator(posts_list, 10)
+    page_obj = paginator.get_page(page_number)
+   
+    post_response = {}
+    post_response["posts"] = [post.serialize() for post in page_obj.object_list]
+    post_response["paginator"] = {
+        "page_number": page_obj.number,
+        "num_pages": page_obj.paginator.num_pages,
+        "has_previous": page_obj.has_previous(),
+        "previous_page_number": page_obj.previous_page_number() if page_obj.has_previous() else None,
+        "has_next": page_obj.has_next(),
+        "next_page_number": page_obj.next_page_number() if page_obj.has_next() else None,
+
+    } 
+
+    return JsonResponse(post_response, safe=False)

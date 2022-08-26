@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  document.querySelector('#following-link').addEventListener('click', () => load_following('following'));
+  const followLink = document.querySelector('#following-link');
+  if (followLink) {
+    followLink.addEventListener('click', () => load_following('following'));
+  }
 
   document.querySelector('#post-form').onsubmit = send_post;
 
@@ -48,7 +51,7 @@ function send_post(e) {
       } else {
         errorMessageElement.innerHTML = '';
         errorMessageElement.style.display = 'none';
-        load_posts();
+        load_posts('all posts');
       }
     }).catch((error) => {
       console.log(`error: ${error}`);
@@ -65,13 +68,13 @@ function getCookie(name) {
 function load_posts(page_name) {
 
   initialize_page(page_name);
-  get_posts();
+  get_posts(page_name);
 
 }
 
 function load_following(page_name) {
   initialize_page(page_name);
-  get_posts();
+  get_posts(page_name);
 
 }
 
@@ -85,16 +88,21 @@ function load_profile(user) {
 }
 
 
-function get_posts() {
+function get_posts(page_name) {
 
-  fetch(`/posts`)
+  let endpoint = "/posts";
+  if (page_name == "following") {
+    endpoint = "/following";
+  }
+
+  fetch(endpoint)
     .then(response => response.json())
-    .then(posts => {
+    .then(json_response => {
 
       const postsContainer = document.querySelector('#posts-view');
       postsContainer.value = '';
 
-      posts.forEach((post) => {
+      json_response.posts.forEach((post) => {
 
         postElement = create_post_box(post);
         postsContainer.appendChild(postElement);
