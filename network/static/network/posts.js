@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const followLink = document.querySelector('#following-link');
   if (followLink) {
-    followLink.addEventListener('click', () => load_following('following'));
+    followLink.addEventListener('click', () => load_posts('following'));
   }
 
   document.querySelector('#post-form').onsubmit = send_post;
@@ -20,6 +20,7 @@ function initialize_page(page_name) {
   document.querySelector('#posts-view').innerHTML = '';
   document.querySelector('#profile-view').innerHTML = '';
   document.querySelector('#page-name').innerHTML = `<h3>${page_name.charAt(0).toUpperCase() + page_name.slice(1)}</h3>`;
+  document.querySelector('#pagination-view').style.display = 'block';
 
 } 
 
@@ -65,22 +66,17 @@ function getCookie(name) {
   if (parts.length === 2) return parts.pop().split(';').shift();
 }
 
-function load_posts(page_name) {
+function load_posts(page_name, page_number = 1) {
 
   initialize_page(page_name);
-  get_posts(page_name);
-
-}
-
-function load_following(page_name) {
-  initialize_page(page_name);
-  get_posts(page_name);
+  get_posts(page_name, page_number);
 
 }
 
 function load_profile(user) {
 
   document.querySelector('#all-posts-view').style.display = 'none';
+  document.querySelector('#pagination-view').style.display = 'none';
   document.querySelector('#posts-view').innerHTML = '';
   document.querySelector('#profile-view').innerHTML = '';
 
@@ -88,16 +84,18 @@ function load_profile(user) {
 }
 
 
-function get_posts(page_name) {
+function get_posts(page_name, page_number) {
 
   let endpoint = "/posts";
   if (page_name == "following") {
     endpoint = "/following";
   }
 
-  fetch(endpoint)
+  fetch(`${endpoint}?page=${page_number}`)
     .then(response => response.json())
     .then(json_response => {
+
+      this.update_paginator(page_name, json_response.paginator);
 
       const postsContainer = document.querySelector('#posts-view');
       postsContainer.value = '';
@@ -109,12 +107,37 @@ function get_posts(page_name) {
 
       });
 
+      
+
 
     }).catch((error) => {
       console.log(`error: ${error}`);
     });
 
 }
+
+function update_paginator(page_name, paginator) {
+
+  const first_page_link = document.getElementById('first-page-link');
+  const previous_page_link = document.getElementById('previous-page-link');
+
+  if (paginator.has_previous) {
+    first_page_link.style.visibility = 'visible';
+    previous_page_link.style.visibility = 'visible';
+
+    first_page_link.onclick = () => load_posts(page_name, 1);
+
+
+  } else {
+    first_page_link.style.visibility = 'hidden';
+    previous_page_link.style.visibility = 'hidden';
+  }
+
+  const last_page_link = document.getElementById('last-page-link');
+  last_page_link.onclick = () => load_posts(page_name, paginator.num_pages);
+
+}
+
 
 function create_post_box(post) {
 
