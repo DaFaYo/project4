@@ -77,7 +77,6 @@ def posts(request):
         if not request.user.is_authenticated:
             return JsonResponse({"error": "You have to be logged in to post a message."}, status=401)
 
-
         data = json.loads(request.body)
         body = data.get("body")
         if body == "":
@@ -156,7 +155,7 @@ def make_post_json_response(request, posts_list):
         page_number = 1
 
     # show 10 posts per page
-    paginator = Paginator(posts_list, 10)
+    paginator = Paginator(posts_list, 4)
     page_obj = paginator.get_page(page_number)
    
     post_response = {}

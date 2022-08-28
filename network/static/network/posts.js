@@ -121,20 +121,37 @@ function update_paginator(page_name, paginator) {
   const first_page_link = document.getElementById('first-page-link');
   const previous_page_link = document.getElementById('previous-page-link');
 
+  const current_page_span = document.getElementById('current-page-span');
+  current_page_span.innerHTML = `Page ${paginator.page_number} of ${paginator.num_pages}.`;
+
+  const next_page_link = document.getElementById('next-page-link');
+  const last_page_link = document.getElementById('last-page-link');
+
   if (paginator.has_previous) {
     first_page_link.style.visibility = 'visible';
     previous_page_link.style.visibility = 'visible';
 
     first_page_link.onclick = () => load_posts(page_name, 1);
-
+    previous_page_link.onclick = () => load_posts(page_name, paginator.page_number - 1);
 
   } else {
     first_page_link.style.visibility = 'hidden';
     previous_page_link.style.visibility = 'hidden';
   }
 
-  const last_page_link = document.getElementById('last-page-link');
-  last_page_link.onclick = () => load_posts(page_name, paginator.num_pages);
+  if (paginator.has_next) {
+    next_page_link.style.visibility = 'visible';
+    last_page_link.style.visibility = 'visible';
+
+    next_page_link.onclick = () => load_posts(page_name, paginator.page_number + 1);
+    last_page_link.onclick = () => load_posts(page_name, paginator.num_pages);
+
+  } else {
+    next_page_link.style.visibility = 'hidden';
+    last_page_link.style.visibility = 'hidden';
+  }
+
+
 
 }
 
