@@ -13,6 +13,8 @@ class User(AbstractUser):
             "number_of_following": self.following.count()
         }
 
+    def __str__(self):
+        return f"id: {self.id}, username: {self.username}"
 
 
 class Post(models.Model):
@@ -20,6 +22,7 @@ class Post(models.Model):
     body = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     likes = models.IntegerField(default=0)
+    last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     def serialize(self):
         return {
@@ -28,5 +31,9 @@ class Post(models.Model):
             "poster_id": self.user.id,
             "body": self.body,
             "timestamp": self.timestamp.strftime("%b %d %Y, %I:%M %p"),
-            "likes": self.likes
+            "likes": self.likes,
+            "last_updated": self.last_updated
         }
+
+    def __str__(self):
+        return f"id: {self.id}, poster: {self.user.username}, timestamp: {self.timestamp}"    

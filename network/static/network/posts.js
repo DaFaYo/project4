@@ -24,6 +24,17 @@ function initialize_page(page_name) {
 
 } 
 
+// Creating a text-area with auto-resize. From Stackoverflow:
+// https://stackoverflow.com/questions/454202/creating-a-textarea-with-auto-resize
+function setAutoResizeToTextAreaElement(tx) {
+    tx.addEventListener("input", OnInput, false);
+} 
+
+function OnInput() {
+  this.style.height = 'auto';
+  this.style.height = (this.scrollHeight) + "px";
+}
+
 
 function send_post(e) {
 
@@ -49,6 +60,10 @@ function send_post(e) {
       if (result.hasOwnProperty('error')) {
         errorMessageElement.innerHTML = result.error;
         errorMessageElement.style.display = 'block';
+        setTimeout(() => {
+          errorMessageElement.innerHTML = '';
+          errorMessageElement.style.display = 'none';
+        }, 5000);
       } else {
         errorMessageElement.innerHTML = '';
         errorMessageElement.style.display = 'none';
@@ -100,9 +115,11 @@ function get_posts(page_name, page_number) {
       const postsContainer = document.querySelector('#posts-view');
       postsContainer.value = '';
 
+      const user_id = (json_response.logged_in_user) ? json_response.logged_in_user.user_id : -1;
+     
       json_response.posts.forEach((post) => {
 
-        postElement = create_post_box(post);
+        postElement = create_post_box(post, user_id);
         postsContainer.appendChild(postElement);
 
       });
@@ -156,7 +173,7 @@ function update_paginator(page_name, paginator) {
 }
 
 
-function create_post_box(post) {
+function create_post_box(post, user_id) {
 
   const postBoxElement = document.createElement('div');
   postBoxElement.setAttribute("class", "card");
@@ -166,32 +183,97 @@ function create_post_box(post) {
 
   const cardTitleElement = document.createElement('h5');
   cardTitleElement.setAttribute("class", "card-title");
-  cardTitleElement.innerHTML = post.poster;
+  cardTitleElement.innerHTML = `<p>${post.poster}</p>`;
   cardTitleElement.addEventListener('click', () => {
     load_profile(post.poster_id);
   });
 
-  const bodyContentElement = document.createElement('div');
+  cardBodyElement.appendChild(cardTitleElement);
 
-  bodyContentElement.innerHTML = `<p>${post.body}</p>`;
+  const bodyContentElement = document.createElement('div');
+  bodyContentElement.innerHTML = post.body;
+
+  if (user_id === post.poster_id) {
+    const editLinkElement = document.createElement('a');
+    editLinkElement.setAttribute("class", "text-primary");
+    editLinkElement.innerHTML = 'Edit';
+    editLinkElement.addEventListener('click', (event) => {
+      editPost(event, post, user_id);
+    });
+    cardBodyElement.append(editLinkElement);
+  }
+
+  cardBodyElement.append(bodyContentElement);
 
   const timestampElement = document.createElement('div');
-  timestampElement.innerHTML = `<p>${post.timestamp}</p>`;
+  timestampElement.innerHTML = `<br>${post.timestamp}`;
   timestampElement.setAttribute("id", "timestamp");
+  cardBodyElement.append(timestampElement);
 
   const likesElement = document.createElement('div');
-  likesElement.innerHTML = `<p>Likes: ${post.likes}</p>`
-
-  cardBodyElement.appendChild(cardTitleElement);
-  cardBodyElement.append(bodyContentElement);
-  cardBodyElement.append(timestampElement);
+  likesElement.innerHTML = `Likes: ${post.likes}`;
   cardBodyElement.append(likesElement);
-
-
+  
   postBoxElement.append(cardBodyElement);
 
   return postBoxElement;
 }
+
+
+function editPost(event, post, user_id) {
+
+  const divElement = document.createElement('div');
+  const textAreaElement = document.createElement('textarea');
+  textAreaElement.innerHTML = event.target.nextSibling.innerHTML;
+  setAutoResizeToTextAreaElement(textAreaElement);
+  divElement.appendChild(textAreaElement);
+
+  const buttonElement = document.createElement('button');
+  buttonElement.addEventListener('click', (event) => {
+    updatePost(event, post, user_id);
+  });
+
+
+  buttonElement.innerHTML = 'Save';
+  divElement.appendChild(buttonElement);
+  
+  event.target.nextSibling.remove();
+  event.target.replaceWith(divElement);
+
+}
+
+
+function updatePost(event, post, user_id) {
+
+  post.body = event.target.previousElementSibling.value;
+
+  const csrftoken = getCookie('csrftoken');
+
+  fetch(`/posts/${post.id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrftoken
+    },
+    mode: 'same-origin', // Do not send CSRF token to another domain.
+    body: JSON.stringify({
+        post_body: post.body
+    })
+  }).then(() => {
+    updatePostBox(event, post, user_id);
+  }).catch((error) => {
+  console.log(`error: ${error}`);
+});
+
+}
+
+function updatePostBox(event, post, user_id) {
+
+  let post_box = event.target.parentNode.parentNode.parentNode;
+  post_box.replaceWith(create_post_box(post, user_id));
+
+}
+
 
 
 function get_profile(profile_id) {

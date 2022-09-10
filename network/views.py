@@ -70,7 +70,7 @@ def register(request):
         return render(request, "network/register.html")
 
 
-def posts(request):
+def posts(request, post_id = None):
 
     if request.method == "POST":
 
@@ -85,10 +85,42 @@ def posts(request):
 
         Post.objects.create(user=request.user, body=body)
         return JsonResponse({"message": "Post sent successfully."}, status=201)
-    
+
+    # Logged-in users can edit their own posts 
+    if request.method == "PUT":
+        return post_edit(request, post_id)
+      
     # Return posts in reverse chronologial order
     posts = Post.objects.all().order_by("-timestamp")
     return make_post_json_response(request, posts)
+
+
+@ensure_csrf_cookie
+@login_required
+def post_edit(request, post_id):
+    post = None
+    try:
+
+        post = Post.objects.get(pk=post_id)
+
+    except ObjectDoesNotExist as e:
+        return page_not_found(request, e)
+
+    if (request.user != post.user):
+        return JsonResponse({
+            "error": "Unauthorized. Only the creater of the original post can edit the post."
+        }, status=401)
+
+    data = json.loads(request.body)
+    new_post_body = data.get("post_body")
+    if new_post_body is None:
+        return JsonResponse({
+            "error": "Illegal operation. The new post content is None."
+        }, status=403)
+
+    post.body = new_post_body
+    post.save()
+    return HttpResponse(status=204)
 
 
 
@@ -122,7 +154,7 @@ def profile(request, user_id):
     elif request.method == "PUT":
         data = json.loads(request.body)
         follow = data.get("following")
-        if follow is not None and (request.user != user):
+        if (follow is not None) and (request.user != user):
             if follow:
                 request.user.following.add(user)
             else:
@@ -134,7 +166,7 @@ def profile(request, user_id):
     else:
         return JsonResponse({
             "error": "GET or PUT request required."
-        }, status=400)
+        }, status=400) 
 
 
 @login_required
@@ -155,7 +187,7 @@ def make_post_json_response(request, posts_list):
         page_number = 1
 
     # show 10 posts per page
-    paginator = Paginator(posts_list, 4)
+    paginator = Paginator(posts_list, 10)
     page_obj = paginator.get_page(page_number)
    
     post_response = {}
@@ -169,5 +201,11 @@ def make_post_json_response(request, posts_list):
         "next_page_number": page_obj.next_page_number() if page_obj.has_next() else None,
 
     } 
+
+    if request.user and request.user.is_authenticated:
+        post_response["logged_in_user"] = {
+            "username": request.user.username,
+            "user_id": request.user.id
+        }
 
     return JsonResponse(post_response, safe=False)
