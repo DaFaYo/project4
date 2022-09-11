@@ -21,7 +21,8 @@ class Post(models.Model):
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="posts")
     body = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
-    likes = models.IntegerField(default=0)
+    likes = models.ManyToManyField(User, related_name="liked_posts")
+    unlikes = models.ManyToManyField(User, related_name="unliked_posts")
     last_updated = models.DateTimeField(auto_now=True, blank=True, null=True)
 
     def serialize(self):
@@ -31,7 +32,7 @@ class Post(models.Model):
             "poster_id": self.user.id,
             "body": self.body,
             "timestamp": self.timestamp.strftime("%b %d %Y, %I:%M %p"),
-            "likes": self.likes,
+            "likes": self.likes.count() - self.unlikes.count(),
             "last_updated": self.last_updated
         }
 

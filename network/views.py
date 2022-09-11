@@ -7,7 +7,6 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.core.exceptions import ObjectDoesNotExist
-from django.views.defaults import page_not_found
 from django.core.paginator import Paginator
 
 from .models import Post, User
@@ -87,9 +86,25 @@ def posts(request, post_id = None):
         return JsonResponse({"message": "Post sent successfully."}, status=201)
 
     # Logged-in users can edit their own posts 
-    if request.method == "PUT":
-        return post_edit(request, post_id)
+    if request.method == "PUT" and (post_id is not None):
+        data = json.loads(request.body)
+        if data.get("post_body"):
+            return post_edit(request, post_id)
+
+        if data.get("like_body"): 
+            return update_likes(request, post_id) 
       
+    if post_id is not None:
+        try:
+
+            post = Post.objects.get(pk=post_id)
+            return JsonResponse(post.serialize(), safe=False)
+
+        except ObjectDoesNotExist:
+            return JsonResponse({
+                "error": "Post not found."
+        }, status=404)
+
     # Return posts in reverse chronologial order
     posts = Post.objects.all().order_by("-timestamp")
     return make_post_json_response(request, posts)
@@ -103,8 +118,10 @@ def post_edit(request, post_id):
 
         post = Post.objects.get(pk=post_id)
 
-    except ObjectDoesNotExist as e:
-        return page_not_found(request, e)
+    except ObjectDoesNotExist:
+            return JsonResponse({
+                "error": "Post not found."
+        }, status=404)
 
     if (request.user != post.user):
         return JsonResponse({
@@ -113,15 +130,66 @@ def post_edit(request, post_id):
 
     data = json.loads(request.body)
     new_post_body = data.get("post_body")
-    if new_post_body is None:
-        return JsonResponse({
-            "error": "Illegal operation. The new post content is None."
-        }, status=403)
-
     post.body = new_post_body
     post.save()
     return HttpResponse(status=204)
 
+
+@ensure_csrf_cookie
+@login_required
+def update_likes(request, post_id):
+    post = None
+    try:
+
+        post = Post.objects.get(pk=post_id)
+
+    except ObjectDoesNotExist:
+            return JsonResponse({
+                "error": "Post not found."
+        }, status=404)
+
+    data = json.loads(request.body)
+    like_unlike = data.get("like_body")
+
+    if like_unlike:
+        option = like_unlike.lower()
+        if option == "like" or option == "unlike":
+
+            # User can't like/unlike their own posts
+            if request.user == post.user:
+                return HttpResponse(status=200)
+
+            # Check if the post is already liked by the logged in user.
+            liked_post = request.user.liked_posts.all().filter(id=post.id)
+            # Check if the post is already unliked by the logged in user.
+            unliked_post = request.user.unliked_posts.all().filter(id=post.id)
+
+
+            if option == "unlike" and not unliked_post.exists():
+                post.unlikes.add(request.user)
+
+                if liked_post.exists():
+                    post.likes.remove(request.user)
+
+                post.save()
+                return HttpResponse(status=204)
+
+            if option == "like" and not liked_post.exists():
+                post.likes.add(request.user)
+
+                if unliked_post.exists():
+                    post.unlikes.remove(request.user)
+
+                post.save()
+                return HttpResponse(status=204)
+
+        # No updates necessary
+        return HttpResponse(status=200)        
+
+    else:
+        return JsonResponse({
+            "error": "Invalid option. Choose either Like or Unlike."
+        }, status=400)
 
 
 @ensure_csrf_cookie
@@ -132,8 +200,10 @@ def profile(request, user_id):
 
         user = User.objects.get(pk=user_id)
 
-    except ObjectDoesNotExist as e:
-        return page_not_found(request, e)
+    except ObjectDoesNotExist:
+            return JsonResponse({
+                "error": "User not found."
+        }, status=404)
 
      # Return email contents
     if request.method == "GET":

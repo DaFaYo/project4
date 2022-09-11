@@ -8,7 +8,11 @@ class UserAdmin(admin.ModelAdmin):
 
 
 class PostAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "timestamp", "likes")   
+    list_display = ("id", "user", "timestamp", "get_likes")   
+
+    @admin.display(ordering='post__likes', description='Likes')
+    def get_likes(self, obj):
+        return obj.likes.count()
 
 
 # Register your models here.

@@ -22,13 +22,13 @@ function initialize_page(page_name) {
   document.querySelector('#page-name').innerHTML = `<h3>${page_name.charAt(0).toUpperCase() + page_name.slice(1)}</h3>`;
   document.querySelector('#pagination-view').style.display = 'block';
 
-} 
+}
 
 // Creating a text-area with auto-resize. From Stackoverflow:
 // https://stackoverflow.com/questions/454202/creating-a-textarea-with-auto-resize
 function setAutoResizeToTextAreaElement(tx) {
-    tx.addEventListener("input", OnInput, false);
-} 
+  tx.addEventListener("input", OnInput, false);
+}
 
 function OnInput() {
   this.style.height = 'auto';
@@ -116,7 +116,7 @@ function get_posts(page_name, page_number) {
       postsContainer.value = '';
 
       const user_id = (json_response.logged_in_user) ? json_response.logged_in_user.user_id : -1;
-     
+
       json_response.posts.forEach((post) => {
 
         postElement = create_post_box(post, user_id);
@@ -124,7 +124,7 @@ function get_posts(page_name, page_number) {
 
       });
 
-      
+
 
 
     }).catch((error) => {
@@ -210,10 +210,35 @@ function create_post_box(post, user_id) {
   timestampElement.setAttribute("id", "timestamp");
   cardBodyElement.append(timestampElement);
 
-  const likesElement = document.createElement('div');
-  likesElement.innerHTML = `Likes: ${post.likes}`;
-  cardBodyElement.append(likesElement);
-  
+
+  const likesDivElement = document.createElement('div');
+  likesDivElement.innerHTML = `Likes: ${post.likes}`;
+  cardBodyElement.append(likesDivElement);
+
+  // If user_id is not -1 then this 'create_post_box' method assumes a logged in user 
+  if ((user_id !== -1) && (user_id !== post.poster_id)) {
+    likeButtonsElement = document.createElement('div');
+    likeButtonElement = document.createElement('button');
+    unlikeButtonElement = document.createElement('button');
+
+    likeButtonElement.setAttribute("class", "btn btn-sm btn-outline-primary mr-1");
+    unlikeButtonElement.setAttribute("class", "btn btn-sm btn-outline-primary");
+    likeButtonElement.innerHTML = 'Like';
+    likeButtonElement.value = 'like';
+    unlikeButtonElement.innerHTML = 'Unlike';
+    unlikeButtonElement.value = 'unlike'
+    likeButtonElement.addEventListener('click', (event) => {
+      updatePost(event, post, user_id, event.target.value);
+    });
+    unlikeButtonElement.addEventListener('click', (event) => {
+      updatePost(event, post, user_id, event.target.value);
+    });
+
+    likeButtonsElement.appendChild(likeButtonElement);
+    likeButtonsElement.appendChild(unlikeButtonElement);
+    cardBodyElement.append(likeButtonsElement);
+  }
+
   postBoxElement.append(cardBodyElement);
 
   return postBoxElement;
@@ -229,41 +254,56 @@ function editPost(event, post, user_id) {
   divElement.appendChild(textAreaElement);
 
   const buttonElement = document.createElement('button');
+  buttonElement.innerHTML = 'Save';
+  buttonElement.value = 'save';
   buttonElement.addEventListener('click', (event) => {
-    updatePost(event, post, user_id);
+    post.body = event.target.previousElementSibling.value;
+    updatePost(event, post, user_id, event.target.value);
   });
 
-
-  buttonElement.innerHTML = 'Save';
   divElement.appendChild(buttonElement);
-  
+
   event.target.nextSibling.remove();
   event.target.replaceWith(divElement);
 
 }
 
 
-function updatePost(event, post, user_id) {
+function updatePost(event, post, user_id, update) {
 
-  post.body = event.target.previousElementSibling.value;
+  body_dict = {};
+  if (update == 'save') {
+    body_dict['post_body'] = post.body;
+  }
+  else {
+    body_dict['like_body'] = update;
+  }
 
   const csrftoken = getCookie('csrftoken');
 
-  fetch(`/posts/${post.id}`, {
+  endpoint = `/posts/${post.id}`;
+
+  fetch(endpoint, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': csrftoken
     },
     mode: 'same-origin', // Do not send CSRF token to another domain.
-    body: JSON.stringify({
-        post_body: post.body
-    })
-  }).then(() => {
-    updatePostBox(event, post, user_id);
-  }).catch((error) => {
-  console.log(`error: ${error}`);
-});
+    body: JSON.stringify(body_dict)
+  })
+    .then(() => {
+
+      return fetch(endpoint)
+        .then(response => response.json())
+        .then(post => updatePostBox(event, post, user_id)
+        ).catch((error) => {
+          console.log(`error: ${error}`);
+        });
+
+    }).catch((error) => {
+      console.log(`error: ${error}`);
+    });
 
 }
 
@@ -318,11 +358,11 @@ function create_profile_box(user) {
     followButtonElement.setAttribute("class", "btn btn-sm btn-outline-primary");
     followButtonElement.innerHTML = (user.following) ? "Unfollow" : "Follow";
     followButtonElement.addEventListener('click', () => {
-    follow_unfollow(user);
+      follow_unfollow(user);
     });
     element.append(followButtonElement);
   }
-  
+
   return element;
 }
 
@@ -340,12 +380,12 @@ function follow_unfollow(user) {
     },
     mode: 'same-origin', // Do not send CSRF token to another domain.
     body: JSON.stringify({
-        following: !user.following
+      following: !user.following
     })
   }).then(() => {
     load_profile(user.id);
   }).catch((error) => {
-  console.log(`error: ${error}`);
-});
+    console.log(`error: ${error}`);
+  });
 
 }
